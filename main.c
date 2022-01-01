@@ -20,6 +20,13 @@
 #define RED_LEDSTP_ON                     GPIO_WriteHigh(RED_LEDSTP_PORT, RED_LEDSTP_PIN)
 #define RED_LEDSTP_OFF                    GPIO_WriteLow(RED_LEDSTP_PORT, RED_LEDSTP_PIN)
 
+#define GREEN_LEDSTP_ON                     GPIO_WriteHigh(GREEN_LEDSTP_PORT, GREEN_LEDSTP_PIN)
+#define GREEN_LEDSTP_OFF                    GPIO_WriteLow(GREEN_LEDSTP_PORT, GREEN_LEDSTP_PIN)
+
+#define BLUE_LEDSTP_ON                     GPIO_WriteHigh(BLUE_LEDSTP_PORT, BLUE_LEDSTP_PIN)
+#define BLUE_LEDSTP_OFF                    GPIO_WriteLow(BLUE_LEDSTP_PORT, BLUE_LEDSTP_PIN)
+
+
 /*************************************************************************************************************/
 /* --- FUNCTION ---------------------------------------------------------------------------------------------*/
 
@@ -39,6 +46,14 @@ int main( void )
     RED_LEDSTP_ON;
     Delay_ms(500);
     RED_LEDSTP_OFF;
+    Delay_ms(500);
+    GREEN_LEDSTP_ON;
+    Delay_ms(500);
+    GREEN_LEDSTP_OFF;
+    Delay_ms(500);
+    BLUE_LEDSTP_ON;
+    Delay_ms(500);
+    BLUE_LEDSTP_OFF;
     Delay_ms(500);
     
   }
