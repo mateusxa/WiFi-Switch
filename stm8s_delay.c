@@ -6,7 +6,8 @@
 void Delay_100us(void)
 {
     __asm(  "push A\n"						
-            "ld A,#197\n"					
+            "ld A,#199\n"		
+			"ld A,#199\n"				
             "start:	nop\n"							
 			"dec A\n"						
 			"jrne start\n"					
