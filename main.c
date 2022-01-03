@@ -2,10 +2,20 @@
 /* --- INCLUDES ---------------------------------------------------------------------------------------------*/
 #include "stm8s.h"
 #include "stm8s_delay.h"
-#include "math.h"
+//#include "math.h"
 
 /*************************************************************************************************************/
 /* --- DEFINE/MACRO -----------------------------------------------------------------------------------------*/
+
+#define RED_LED_PORT                      GPIOD
+#define RED_LED_PIN                       GPIO_PIN_3
+
+#define GREEN_LED_PORT                    GPIOD
+#define GREEN_LED_PIN                     GPIO_PIN_1
+
+#define BLUE_LED_PORT                     GPIOC
+#define BLUE_LED_PIN                      GPIO_PIN_5
+
 
 #define RED_LEDSTP_PORT                   GPIOC
 #define RED_LEDSTP_PIN                    GPIO_PIN_4
@@ -16,11 +26,25 @@
 #define BLUE_LEDSTP_PORT                  GPIOA
 #define BLUE_LEDSTP_PIN                   GPIO_PIN_3
 
+
 #define TIM1_PERIOD                       255
 #define TIM2_PERIOD                       255
 #define TIM4_PERIOD                       255
 
 /* ----------------------------------------------------------------------------------------------------------*/
+
+#define RED_LED_ON                        GPIO_WriteHigh(RED_LED_PORT, RED_LED_PIN)
+#define RED_LED_OFF                       GPIO_WriteLow(RED_LED_PORT, RED_LED_PIN)
+#define READ_RED_LED                      GPIO_ReadInputPin(RED_LED_PORT, RED_LED_PIN)
+
+#define GREEN_LED_ON                      GPIO_WriteHigh(GREEN_LED_PORT, GREEN_LED_PIN)
+#define GREEN_LED_OFF                     GPIO_WriteLow(GREEN_LED_PORT, GREEN_LED_PIN)
+#define READ_GREEN_LED                    GPIO_ReadInputPin(GREEN_LED_PORT, GREEN_LED_PIN)
+
+#define BLUE_LED_ON                       GPIO_WriteHigh(BLUE_LED_PORT, BLUE_LED_PIN)
+#define BLUE_LED_OFF                      GPIO_WriteLow(BLUE_LED_PORT, BLUE_LED_PIN)
+#define READ_BLUE_LED                     GPIO_ReadInputPin(BLUE_LED_PORT, BLUE_LED_PIN)
+
 
 #define RED_LEDSTP_ON                     GPIO_WriteHigh(RED_LEDSTP_PORT, RED_LEDSTP_PIN)
 #define RED_LEDSTP_OFF                    GPIO_WriteLow(RED_LEDSTP_PORT, RED_LEDSTP_PIN)
@@ -57,36 +81,48 @@ uint16_t Blue_PWM_Value = 127;
 
 INTERRUPT_HANDLER(TIM1_UPD_OVF_TRG_BRK_IRQHandler, 11)
  {  
-    if(READ_RED_LEDSTP){                                  // Is Output pin HIGH?
-      TIM1_SetCounter(Red_PWM_Value);                      // Set PWM duty cycle low value
-      RED_LEDSTP_OFF;                                     // Turn off Output pin
-    }else{                                                 // Output pin is LOW
-      TIM1_SetCounter(TIM1_PERIOD - Red_PWM_Value);        // Set PWM duty cycle high value
-      RED_LEDSTP_ON;                                      // Turn on Output pin
+    if(Red_PWM_Value > 250) RED_LEDSTP_ON;
+    else if(Red_PWM_Value < 10) RED_LEDSTP_OFF;
+    else{
+      if(READ_RED_LEDSTP){                                  // Is Output pin HIGH?
+          TIM1_SetCounter(Red_PWM_Value);                      // Set PWM duty cycle low value
+          RED_LEDSTP_OFF;                                     // Turn off Output pin
+      }else{                                                 // Output pin is LOW
+        TIM1_SetCounter(TIM1_PERIOD - Red_PWM_Value);        // Set PWM duty cycle high value
+        RED_LEDSTP_ON;                                      // Turn on Output pin
+      }
     }
     TIM1_ClearFlag(TIM1_FLAG_UPDATE);                      // Reset Overflow Flag
  }
 
 INTERRUPT_HANDLER(TIM2_UPD_OVF_BRK_IRQHandler, 13)
  {  
-    if(READ_GREEN_LEDSTP){                                  // Is Output pin HIGH?
-      TIM2_SetCounter(Green_PWM_Value);                      // Set PWM duty cycle low value
-      GREEN_LEDSTP_OFF;                                     // Turn off Output pin
-    }else{                                                 // Output pin is LOW
-      TIM2_SetCounter(TIM2_PERIOD - Green_PWM_Value);        // Set PWM duty cycle high value
-      GREEN_LEDSTP_ON;                                      // Turn on Output pin
+    if(Green_PWM_Value > 250) GREEN_LEDSTP_ON;
+    else if(Green_PWM_Value < 10) GREEN_LEDSTP_OFF;
+    else{
+      if(READ_GREEN_LEDSTP){                                  // Is Output pin HIGH?
+        TIM2_SetCounter(Green_PWM_Value);                      // Set PWM duty cycle low value
+        GREEN_LEDSTP_OFF;                                     // Turn off Output pin
+      }else{                                                 // Output pin is LOW
+        TIM2_SetCounter(TIM2_PERIOD - Green_PWM_Value);        // Set PWM duty cycle high value
+        GREEN_LEDSTP_ON;                                      // Turn on Output pin
+      }
     }
     TIM2_ClearFlag(TIM2_FLAG_UPDATE);                      // Reset Overflow Flag
  }
 
 INTERRUPT_HANDLER(TIM4_UPD_OVF_IRQHandler, 23)
  {  
-    if(READ_BLUE_LEDSTP){                                  // Is Output pin HIGH?
-      TIM4_SetCounter(Blue_PWM_Value);                      // Set PWM duty cycle low value
-      BLUE_LEDSTP_OFF;                                     // Turn off Output pin
-    }else{                                                 // Output pin is LOW
-      TIM4_SetCounter(TIM4_PERIOD - Blue_PWM_Value);        // Set PWM duty cycle high value
-      BLUE_LEDSTP_ON;                                      // Turn on Output pin
+    if(Blue_PWM_Value > 250) BLUE_LEDSTP_ON;
+    else if(Blue_PWM_Value < 10) BLUE_LEDSTP_OFF;
+    else{
+      if(READ_BLUE_LEDSTP){                                  // Is Output pin HIGH?
+        TIM4_SetCounter(Blue_PWM_Value);                      // Set PWM duty cycle low value
+        BLUE_LEDSTP_OFF;                                     // Turn off Output pin
+      }else{                                                 // Output pin is LOW
+        TIM4_SetCounter(TIM4_PERIOD - Blue_PWM_Value);        // Set PWM duty cycle high value
+        BLUE_LEDSTP_ON;                                      // Turn on Output pin
+      }
     }
     TIM4_ClearFlag(TIM4_FLAG_UPDATE);                      // Reset Overflow Flag
  }
@@ -103,10 +139,25 @@ int main( void )
   /* --- LOOP --- */
   while(1){
     // for(int i = 0; i < TIM4_PERIOD; i += 5){
-    //   if(0.784*exp(0.023*i) > 245) Blue_PWM_Value = 245;
-    //   else Blue_PWM_Value = 0.784*exp(0.023*i);
+    //     Red_PWM_Value = i; // 0.784*exp(0.023*i);
+    //     Green_PWM_Value = i; // 0.784*exp(0.023*i);
+    //     Blue_PWM_Value = i; // 0.784*exp(0.023*i);
     //   Delay_ms(50);
     // }
+
+    RED_LED_ON;
+    Delay_ms(500);
+    RED_LED_OFF;
+    Delay_ms(500);
+    GREEN_LED_ON;
+    Delay_ms(500);
+    GREEN_LED_OFF;
+    Delay_ms(500);
+    BLUE_LED_ON;
+    Delay_ms(500);
+    BLUE_LED_OFF;
+    Delay_ms(500);
+
   }
 }
 
@@ -149,6 +200,10 @@ void GPIO_init(void){
     GPIO_DeInit(GPIOA);
     GPIO_DeInit(GPIOB);
     GPIO_DeInit(GPIOC);
+
+    GPIO_Init(RED_LED_PORT, RED_LED_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+    GPIO_Init(GREEN_LED_PORT, GREEN_LED_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+    GPIO_Init(BLUE_LED_PORT, BLUE_LED_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
 
     GPIO_Init(RED_LEDSTP_PORT, RED_LEDSTP_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
     GPIO_Init(GREEN_LEDSTP_PORT, GREEN_LEDSTP_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
