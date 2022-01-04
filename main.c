@@ -7,6 +7,16 @@
 /*************************************************************************************************************/
 /* --- DEFINE/MACRO -----------------------------------------------------------------------------------------*/
 
+#define RED_BUTTON_PORT                   GPIOA
+#define RED_BUTTON_PIN                    GPIO_PIN_1
+
+#define GREEN_BUTTON_PORT                 GPIOD
+#define GREEN_BUTTON_PIN                  GPIO_PIN_4
+
+#define BLUE_BUTTON_PORT                  GPIOB
+#define BLUE_BUTTON_PIN                   GPIO_PIN_4
+
+
 #define RED_LED_PORT                      GPIOD
 #define RED_LED_PIN                       GPIO_PIN_3
 
@@ -32,6 +42,10 @@
 #define TIM4_PERIOD                       255
 
 /* ----------------------------------------------------------------------------------------------------------*/
+
+#define READ_RED_BUTTON                   GPIO_ReadInputPin(RED_BUTTON_PORT, RED_BUTTON_PIN)
+#define READ_GREEN_BUTTON                 GPIO_ReadInputPin(GREEN_BUTTON_PORT, GREEN_BUTTON_PIN)
+#define READ_BLUE_BUTTON                  GPIO_ReadInputPin(BLUE_BUTTON_PORT, BLUE_BUTTON_PIN)
 
 #define RED_LED_ON                        GPIO_WriteHigh(RED_LED_PORT, RED_LED_PIN)
 #define RED_LED_OFF                       GPIO_WriteLow(RED_LED_PORT, RED_LED_PIN)
@@ -65,6 +79,7 @@
 void MCU_init(void);
 void OSC_init(void);
 void GPIO_init(void);
+void INT_init(void);
 void TMR1_init(void);
 void TMR2_init(void);
 void TMR4_init(void);
@@ -78,6 +93,24 @@ uint16_t Blue_PWM_Value = 127;
 
 /*************************************************************************************************************/
 /* --- INTERRUPT HANDLER ------------------------------------------------------------------------------------*/
+
+INTERRUPT_HANDLER(EXTI_PORTA_IRQHandler, 3){
+    if(!READ_RED_BUTTON){
+      GPIO_WriteReverse(RED_LED_PORT, RED_LED_PIN);
+    }
+}
+
+INTERRUPT_HANDLER(EXTI_PORTD_IRQHandler, 6){
+    if(!READ_GREEN_BUTTON){
+      GPIO_WriteReverse(GREEN_LED_PORT, GREEN_LED_PIN);
+    }
+}
+
+INTERRUPT_HANDLER(EXTI_PORTB_IRQHandler, 4){
+    if(!READ_BLUE_BUTTON){
+      GPIO_WriteReverse(BLUE_LED_PORT, BLUE_LED_PIN);
+    }
+}
 
 INTERRUPT_HANDLER(TIM1_UPD_OVF_TRG_BRK_IRQHandler, 11)
  {  
@@ -144,20 +177,6 @@ int main( void )
     //     Blue_PWM_Value = i; // 0.784*exp(0.023*i);
     //   Delay_ms(50);
     // }
-
-    RED_LED_ON;
-    Delay_ms(500);
-    RED_LED_OFF;
-    Delay_ms(500);
-    GREEN_LED_ON;
-    Delay_ms(500);
-    GREEN_LED_OFF;
-    Delay_ms(500);
-    BLUE_LED_ON;
-    Delay_ms(500);
-    BLUE_LED_OFF;
-    Delay_ms(500);
-
   }
 }
 
@@ -174,6 +193,7 @@ void MCU_init(void){
     TMR1_init();
     TMR2_init();
     TMR4_init();
+    INT_init();
     Delay_100us();
     enableInterrupts();
 }
@@ -208,6 +228,26 @@ void GPIO_init(void){
     GPIO_Init(RED_LEDSTP_PORT, RED_LEDSTP_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
     GPIO_Init(GREEN_LEDSTP_PORT, GREEN_LEDSTP_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
     GPIO_Init(BLUE_LEDSTP_PORT, BLUE_LEDSTP_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+
+    GPIO_Init(RED_BUTTON_PORT, RED_BUTTON_PIN, GPIO_MODE_IN_PU_IT);
+    GPIO_Init(GREEN_BUTTON_PORT, GREEN_BUTTON_PIN, GPIO_MODE_IN_PU_IT);
+    GPIO_Init(BLUE_BUTTON_PORT, BLUE_BUTTON_PIN, GPIO_MODE_IN_PU_IT);
+
+}
+
+/**
+  * @brief  General Ports configuration
+  */
+void INT_init(void){
+  
+  EXTI_SetExtIntSensitivity(EXTI_PORT_GPIOA, EXTI_SENSITIVITY_FALL_ONLY);
+  ITC_SetSoftwarePriority(ITC_IRQ_PORTA, ITC_PRIORITYLEVEL_1);
+
+  EXTI_SetExtIntSensitivity(EXTI_PORT_GPIOD, EXTI_SENSITIVITY_FALL_ONLY);
+  ITC_SetSoftwarePriority(ITC_IRQ_PORTD, ITC_PRIORITYLEVEL_1);
+
+  EXTI_SetExtIntSensitivity(EXTI_PORT_GPIOB, EXTI_SENSITIVITY_FALL_ONLY);
+  ITC_SetSoftwarePriority(ITC_IRQ_PORTB, ITC_PRIORITYLEVEL_1);
 
 }
 
