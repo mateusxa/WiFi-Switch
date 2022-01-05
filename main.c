@@ -16,6 +16,15 @@
 #define BLUE_BUTTON_PORT                  GPIOB
 #define BLUE_BUTTON_PIN                   GPIO_PIN_4
 
+#define INCREASE_BUTTON_PORT              GPIOB
+#define INCREASE_BUTTON_PIN               GPIO_PIN_5
+
+#define DECREASE_BUTTON_PORT              GPIOC
+#define DECREASE_BUTTON_PIN               GPIO_PIN_6
+
+#define SELECT_BUTTON_PORT                GPIOB
+#define SELECT_BUTTON_PIN                 GPIO_PIN_7
+
 
 #define RED_LED_PORT                      GPIOD
 #define RED_LED_PIN                       GPIO_PIN_3
@@ -36,6 +45,9 @@
 #define BLUE_LEDSTP_PORT                  GPIOA
 #define BLUE_LEDSTP_PIN                   GPIO_PIN_3
 
+#define LIGHT_BULB_PORT                   GPIOC
+#define LIGHT_BULB_PIN                    GPIO_PIN_7
+
 
 #define TIM1_PERIOD                       255
 #define TIM2_PERIOD                       255
@@ -46,6 +58,10 @@
 #define READ_RED_BUTTON                   GPIO_ReadInputPin(RED_BUTTON_PORT, RED_BUTTON_PIN)
 #define READ_GREEN_BUTTON                 GPIO_ReadInputPin(GREEN_BUTTON_PORT, GREEN_BUTTON_PIN)
 #define READ_BLUE_BUTTON                  GPIO_ReadInputPin(BLUE_BUTTON_PORT, BLUE_BUTTON_PIN)
+
+#define READ_INCREASE_BUTTON              GPIO_ReadInputPin(INCREASE_BUTTON_PORT, INCREASE_BUTTON_PIN)
+#define READ_DECREASE_BUTTON              GPIO_ReadInputPin(DECREASE_BUTTON_PORT, DECREASE_BUTTON_PIN)
+#define READ_SELECT_BUTTON                GPIO_ReadInputPin(SELECT_BUTTON_PORT, SELECT_BUTTON_PIN)
 
 #define RED_LED_ON                        GPIO_WriteHigh(RED_LED_PORT, RED_LED_PIN)
 #define RED_LED_OFF                       GPIO_WriteLow(RED_LED_PORT, RED_LED_PIN)
@@ -91,24 +107,51 @@ uint8_t Red_PWM_Value = 127;
 uint8_t Green_PWM_Value = 127;
 uint16_t Blue_PWM_Value = 127;
 
+bool Red_Mode_Selected  = FALSE;
+bool Green_Mode_Selected  = FALSE;
+bool Blue_Mode_Selected  = FALSE;
+
+
 /*************************************************************************************************************/
 /* --- INTERRUPT HANDLER ------------------------------------------------------------------------------------*/
 
 INTERRUPT_HANDLER(EXTI_PORTA_IRQHandler, 3){
     if(!READ_RED_BUTTON){
-      GPIO_WriteReverse(RED_LED_PORT, RED_LED_PIN);
-    }
-}
-
-INTERRUPT_HANDLER(EXTI_PORTD_IRQHandler, 6){
-    if(!READ_GREEN_BUTTON){
-      GPIO_WriteReverse(GREEN_LED_PORT, GREEN_LED_PIN);
+      if(Red_Mode_Selected) Red_Mode_Selected = FALSE;
+      else Red_Mode_Selected = TRUE;
     }
 }
 
 INTERRUPT_HANDLER(EXTI_PORTB_IRQHandler, 4){
     if(!READ_BLUE_BUTTON){
-      GPIO_WriteReverse(BLUE_LED_PORT, BLUE_LED_PIN);
+      if(Blue_Mode_Selected) Blue_Mode_Selected = FALSE;
+      else Blue_Mode_Selected = TRUE;
+    }
+
+    if(!READ_INCREASE_BUTTON){
+      if(Red_Mode_Selected) Red_PWM_Value = Red_PWM_Value + 10;
+      if(Green_Mode_Selected) Green_PWM_Value = Green_PWM_Value + 10;
+      if(Blue_Mode_Selected) Blue_PWM_Value = Blue_PWM_Value + 10;
+    }
+
+
+}
+
+INTERRUPT_HANDLER(EXTI_PORTC_IRQHandler, 5){
+
+    if(!READ_DECREASE_BUTTON){
+      if(Red_Mode_Selected) Red_PWM_Value = Red_PWM_Value - 10;
+      if(Green_Mode_Selected) Green_PWM_Value = Green_PWM_Value - 10;
+      if(Blue_Mode_Selected) Blue_PWM_Value = Blue_PWM_Value - 10;
+    }
+
+
+}
+
+INTERRUPT_HANDLER(EXTI_PORTD_IRQHandler, 6){
+    if(!READ_GREEN_BUTTON){
+      if(Green_Mode_Selected) Green_Mode_Selected = FALSE;
+      else Green_Mode_Selected = TRUE;
     }
 }
 
@@ -171,6 +214,16 @@ int main( void )
 
   /* --- LOOP --- */
   while(1){
+
+    if(Red_Mode_Selected) RED_LED_ON;
+    else if(!Red_Mode_Selected) RED_LED_OFF;
+    
+    if(Green_Mode_Selected) GREEN_LED_ON;
+    else if(!Green_Mode_Selected) GREEN_LED_OFF;
+
+    if(Blue_Mode_Selected) BLUE_LED_ON;
+    else if(!Blue_Mode_Selected) BLUE_LED_OFF;
+
     // for(int i = 0; i < TIM4_PERIOD; i += 5){
     //     Red_PWM_Value = i; // 0.784*exp(0.023*i);
     //     Green_PWM_Value = i; // 0.784*exp(0.023*i);
@@ -233,6 +286,10 @@ void GPIO_init(void){
     GPIO_Init(GREEN_BUTTON_PORT, GREEN_BUTTON_PIN, GPIO_MODE_IN_PU_IT);
     GPIO_Init(BLUE_BUTTON_PORT, BLUE_BUTTON_PIN, GPIO_MODE_IN_PU_IT);
 
+    GPIO_Init(INCREASE_BUTTON_PORT, INCREASE_BUTTON_PIN, GPIO_MODE_IN_PU_IT);
+    GPIO_Init(DECREASE_BUTTON_PORT, DECREASE_BUTTON_PIN, GPIO_MODE_IN_PU_IT);
+    GPIO_Init(SELECT_BUTTON_PORT, SELECT_BUTTON_PIN, GPIO_MODE_IN_PU_IT);
+
 }
 
 /**
@@ -243,12 +300,14 @@ void INT_init(void){
   EXTI_SetExtIntSensitivity(EXTI_PORT_GPIOA, EXTI_SENSITIVITY_FALL_ONLY);
   ITC_SetSoftwarePriority(ITC_IRQ_PORTA, ITC_PRIORITYLEVEL_1);
 
-  EXTI_SetExtIntSensitivity(EXTI_PORT_GPIOD, EXTI_SENSITIVITY_FALL_ONLY);
-  ITC_SetSoftwarePriority(ITC_IRQ_PORTD, ITC_PRIORITYLEVEL_1);
-
   EXTI_SetExtIntSensitivity(EXTI_PORT_GPIOB, EXTI_SENSITIVITY_FALL_ONLY);
   ITC_SetSoftwarePriority(ITC_IRQ_PORTB, ITC_PRIORITYLEVEL_1);
 
+  EXTI_SetExtIntSensitivity(EXTI_PORT_GPIOC, EXTI_SENSITIVITY_FALL_ONLY);
+  ITC_SetSoftwarePriority(ITC_IRQ_PORTC, ITC_PRIORITYLEVEL_1);
+
+  EXTI_SetExtIntSensitivity(EXTI_PORT_GPIOD, EXTI_SENSITIVITY_FALL_ONLY);
+  ITC_SetSoftwarePriority(ITC_IRQ_PORTD, ITC_PRIORITYLEVEL_1);
 }
 
 /**
