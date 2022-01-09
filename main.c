@@ -16,13 +16,14 @@
 #define BLUE_BUTTON_PORT                  GPIOB
 #define BLUE_BUTTON_PIN                   GPIO_PIN_4
 
+
 #define INCREASE_BUTTON_PORT              GPIOB
 #define INCREASE_BUTTON_PIN               GPIO_PIN_5
 
 #define DECREASE_BUTTON_PORT              GPIOC
 #define DECREASE_BUTTON_PIN               GPIO_PIN_6
 
-#define SELECT_BUTTON_PORT                GPIOB
+#define SELECT_BUTTON_PORT                GPIOC
 #define SELECT_BUTTON_PIN                 GPIO_PIN_7
 
 
@@ -45,8 +46,9 @@
 #define BLUE_LEDSTP_PORT                  GPIOA
 #define BLUE_LEDSTP_PIN                   GPIO_PIN_3
 
-#define LIGHT_BULB_PORT                   GPIOC
-#define LIGHT_BULB_PIN                    GPIO_PIN_7
+
+#define LIGHT_BULB_PORT                   GPIOD
+#define LIGHT_BULB_PIN                    GPIO_PIN_2
 
 
 #define TIM1_PERIOD                       255
@@ -74,6 +76,10 @@
 #define BLUE_LED_ON                       GPIO_WriteHigh(BLUE_LED_PORT, BLUE_LED_PIN)
 #define BLUE_LED_OFF                      GPIO_WriteLow(BLUE_LED_PORT, BLUE_LED_PIN)
 #define READ_BLUE_LED                     GPIO_ReadInputPin(BLUE_LED_PORT, BLUE_LED_PIN)
+
+#define LIGHT_BULB_ON                     GPIO_WriteHigh(LIGHT_BULB_PORT, LIGHT_BULB_PIN)
+#define LIGHT_BULB_OFF                    GPIO_WriteLow(LIGHT_BULB_PORT, LIGHT_BULB_PIN)
+#define READ_LIGHT_BULB                   GPIO_ReadInputPin(LIGHT_BULB_PORT, LIGHT_BULB_PIN)
 
 
 #define RED_LEDSTP_ON                     GPIO_WriteHigh(RED_LEDSTP_PORT, RED_LEDSTP_PIN)
@@ -129,9 +135,9 @@ INTERRUPT_HANDLER(EXTI_PORTB_IRQHandler, 4){
     }
 
     if(!READ_INCREASE_BUTTON){
-      if(Red_Mode_Selected) Red_PWM_Value = Red_PWM_Value + 10;
-      if(Green_Mode_Selected) Green_PWM_Value = Green_PWM_Value + 10;
-      if(Blue_Mode_Selected) Blue_PWM_Value = Blue_PWM_Value + 10;
+      if(Red_Mode_Selected) Red_PWM_Value = Red_PWM_Value + 5;
+      if(Green_Mode_Selected) Green_PWM_Value = Green_PWM_Value + 5;
+      if(Blue_Mode_Selected) Blue_PWM_Value = Blue_PWM_Value + 5;
     }
 
 
@@ -140,9 +146,16 @@ INTERRUPT_HANDLER(EXTI_PORTB_IRQHandler, 4){
 INTERRUPT_HANDLER(EXTI_PORTC_IRQHandler, 5){
 
     if(!READ_DECREASE_BUTTON){
-      if(Red_Mode_Selected) Red_PWM_Value = Red_PWM_Value - 10;
-      if(Green_Mode_Selected) Green_PWM_Value = Green_PWM_Value - 10;
-      if(Blue_Mode_Selected) Blue_PWM_Value = Blue_PWM_Value - 10;
+      if(Red_Mode_Selected) Red_PWM_Value = Red_PWM_Value - 5;
+      if(Green_Mode_Selected) Green_PWM_Value = Green_PWM_Value - 5;
+      if(Blue_Mode_Selected) Blue_PWM_Value = Blue_PWM_Value - 5;
+    }
+
+    if(!READ_SELECT_BUTTON){
+      LIGHT_BULB_ON;  
+      Red_PWM_Value = 255; 
+      Green_PWM_Value = 255;
+      Blue_PWM_Value = 255; 
     }
 
 
@@ -158,7 +171,7 @@ INTERRUPT_HANDLER(EXTI_PORTD_IRQHandler, 6){
 INTERRUPT_HANDLER(TIM1_UPD_OVF_TRG_BRK_IRQHandler, 11)
  {  
     if(Red_PWM_Value > 250) RED_LEDSTP_ON;
-    else if(Red_PWM_Value < 10) RED_LEDSTP_OFF;
+    else if(Red_PWM_Value < 5) RED_LEDSTP_OFF;
     else{
       if(READ_RED_LEDSTP){                                  // Is Output pin HIGH?
           TIM1_SetCounter(Red_PWM_Value);                      // Set PWM duty cycle low value
@@ -174,7 +187,7 @@ INTERRUPT_HANDLER(TIM1_UPD_OVF_TRG_BRK_IRQHandler, 11)
 INTERRUPT_HANDLER(TIM2_UPD_OVF_BRK_IRQHandler, 13)
  {  
     if(Green_PWM_Value > 250) GREEN_LEDSTP_ON;
-    else if(Green_PWM_Value < 10) GREEN_LEDSTP_OFF;
+    else if(Green_PWM_Value < 5) GREEN_LEDSTP_OFF;
     else{
       if(READ_GREEN_LEDSTP){                                  // Is Output pin HIGH?
         TIM2_SetCounter(Green_PWM_Value);                      // Set PWM duty cycle low value
@@ -190,7 +203,7 @@ INTERRUPT_HANDLER(TIM2_UPD_OVF_BRK_IRQHandler, 13)
 INTERRUPT_HANDLER(TIM4_UPD_OVF_IRQHandler, 23)
  {  
     if(Blue_PWM_Value > 250) BLUE_LEDSTP_ON;
-    else if(Blue_PWM_Value < 10) BLUE_LEDSTP_OFF;
+    else if(Blue_PWM_Value < 5) BLUE_LEDSTP_OFF;
     else{
       if(READ_BLUE_LEDSTP){                                  // Is Output pin HIGH?
         TIM4_SetCounter(Blue_PWM_Value);                      // Set PWM duty cycle low value
@@ -220,6 +233,9 @@ int main( void )
     
     if(Green_Mode_Selected) GREEN_LED_ON;
     else if(!Green_Mode_Selected) GREEN_LED_OFF;
+
+    if(Blue_Mode_Selected) BLUE_LED_ON;
+    else if(!Blue_Mode_Selected) BLUE_LED_OFF;
 
     if(Blue_Mode_Selected) BLUE_LED_ON;
     else if(!Blue_Mode_Selected) BLUE_LED_OFF;
@@ -281,6 +297,8 @@ void GPIO_init(void){
     GPIO_Init(RED_LEDSTP_PORT, RED_LEDSTP_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
     GPIO_Init(GREEN_LEDSTP_PORT, GREEN_LEDSTP_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
     GPIO_Init(BLUE_LEDSTP_PORT, BLUE_LEDSTP_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+
+    GPIO_Init(LIGHT_BULB_PORT, LIGHT_BULB_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
 
     GPIO_Init(RED_BUTTON_PORT, RED_BUTTON_PIN, GPIO_MODE_IN_PU_IT);
     GPIO_Init(GREEN_BUTTON_PORT, GREEN_BUTTON_PIN, GPIO_MODE_IN_PU_IT);
