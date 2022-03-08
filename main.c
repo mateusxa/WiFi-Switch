@@ -4,6 +4,8 @@
 #include "stm8s_delay.h"
 //#include "math.h"
 
+
+
 /*************************************************************************************************************/
 /* --- DEFINE/MACRO -----------------------------------------------------------------------------------------*/
 
@@ -51,9 +53,9 @@
 #define LIGHT_BULB_PIN                    GPIO_PIN_2
 
 
-#define TIM1_PERIOD                       255
-#define TIM2_PERIOD                       255
-#define TIM4_PERIOD                       255
+#define TIM1_PERIOD                       156
+#define TIM2_PERIOD                       156
+#define TIM4_PERIOD                       156
 
 /* ----------------------------------------------------------------------------------------------------------*/
 
@@ -109,13 +111,15 @@ void TMR4_init(void);
 /*************************************************************************************************************/
 /* --- VARIABLES --------------------------------------------------------------------------------------------*/
 
-uint8_t Red_PWM_Value = 127;
-uint8_t Green_PWM_Value = 127;
-uint16_t Blue_PWM_Value = 127;
+uint8_t Red_PWM_Value = 1;
+uint8_t Green_PWM_Value = 1;
+uint16_t Blue_PWM_Value = 1;
 
 bool Red_Mode_Selected  = FALSE;
 bool Green_Mode_Selected  = FALSE;
 bool Blue_Mode_Selected  = FALSE;
+bool Increase_Button_Pressed = FALSE;
+bool Decrease_Button_Pressed = FALSE;
 
 
 /*************************************************************************************************************/
@@ -137,7 +141,12 @@ INTERRUPT_HANDLER(EXTI_PORTB_IRQHandler, 4){
     if(!READ_INCREASE_BUTTON){
       if(Red_Mode_Selected) Red_PWM_Value = Red_PWM_Value + 5;
       if(Green_Mode_Selected) Green_PWM_Value = Green_PWM_Value + 5;
-      if(Blue_Mode_Selected) Blue_PWM_Value = Blue_PWM_Value + 5;
+      if(Blue_Mode_Selected){
+        if(Blue_PWM_Value + 5 > TIM4_PERIOD) Blue_PWM_Value = TIM4_PERIOD - 1;
+        else Blue_PWM_Value = Blue_PWM_Value + 5;
+      } 
+
+      Increase_Button_Pressed = TRUE;
     }
 
 
@@ -146,16 +155,37 @@ INTERRUPT_HANDLER(EXTI_PORTB_IRQHandler, 4){
 INTERRUPT_HANDLER(EXTI_PORTC_IRQHandler, 5){
 
     if(!READ_DECREASE_BUTTON){
-      if(Red_Mode_Selected) Red_PWM_Value = Red_PWM_Value - 5;
+      if(Red_Mode_Selected){
+        if(Red_PWM_Value - 5 < 5) 
+        Red_PWM_Value = Red_PWM_Value - 5;
+      } 
       if(Green_Mode_Selected) Green_PWM_Value = Green_PWM_Value - 5;
-      if(Blue_Mode_Selected) Blue_PWM_Value = Blue_PWM_Value - 5;
+      if(Blue_Mode_Selected){
+        if(Blue_PWM_Value - 5 < 5 || Blue_PWM_Value - 5 > TIM4_PERIOD) Blue_PWM_Value = 1;
+        else Blue_PWM_Value = Blue_PWM_Value - 5;
+      } 
+
+      Decrease_Button_Pressed = TRUE;
     }
 
     if(!READ_SELECT_BUTTON){
-      LIGHT_BULB_ON;  
-      Red_PWM_Value = 255; 
-      Green_PWM_Value = 255;
-      Blue_PWM_Value = 255; 
+      if(READ_LIGHT_BULB){
+        if(Red_PWM_Value == 255 && 
+           Green_PWM_Value == 255 &&
+           Blue_PWM_Value == 255){
+
+              Red_PWM_Value = 0; 
+              Green_PWM_Value = 0;
+              Blue_PWM_Value = 0; 
+           }
+        LIGHT_BULB_OFF;
+      }else{
+        LIGHT_BULB_ON;  
+        Red_PWM_Value = 255; 
+        Green_PWM_Value = 255;
+        Blue_PWM_Value = 255; 
+      }
+      
     }
 
 
@@ -201,16 +231,16 @@ INTERRUPT_HANDLER(TIM2_UPD_OVF_BRK_IRQHandler, 13)
  }
 
 INTERRUPT_HANDLER(TIM4_UPD_OVF_IRQHandler, 23)
- {  
-    if(Blue_PWM_Value > 250) BLUE_LEDSTP_ON;
-    else if(Blue_PWM_Value < 5) BLUE_LEDSTP_OFF;
+ {
+    if(Blue_PWM_Value > TIM4_PERIOD - 2) BLUE_LEDSTP_ON;
+    else if(Blue_PWM_Value < 2) BLUE_LEDSTP_OFF;
     else{
       if(READ_BLUE_LEDSTP){                                  // Is Output pin HIGH?
-        TIM4_SetCounter(Blue_PWM_Value);                      // Set PWM duty cycle low value
-        BLUE_LEDSTP_OFF;                                     // Turn off Output pin
+          TIM4_SetCounter(Blue_PWM_Value);                      // Set PWM duty cycle low value
+          BLUE_LEDSTP_OFF;                                     // Turn off Output pin
       }else{                                                 // Output pin is LOW
-        TIM4_SetCounter(TIM4_PERIOD - Blue_PWM_Value);        // Set PWM duty cycle high value
-        BLUE_LEDSTP_ON;                                      // Turn on Output pin
+          TIM4_SetCounter(TIM4_PERIOD - Blue_PWM_Value);        // Set PWM duty cycle high value
+          BLUE_LEDSTP_ON;                                      // Turn on Output pin
       }
     }
     TIM4_ClearFlag(TIM4_FLAG_UPDATE);                      // Reset Overflow Flag
@@ -239,13 +269,26 @@ int main( void )
 
     if(Blue_Mode_Selected) BLUE_LED_ON;
     else if(!Blue_Mode_Selected) BLUE_LED_OFF;
+    /*
+    if(Increase_Button_Pressed){
+      if(!READ_INCREASE_BUTTON){
+        if(Red_Mode_Selected) Red_PWM_Value = Red_PWM_Value + 5;
+        if(Green_Mode_Selected) Green_PWM_Value = Green_PWM_Value + 5;
+        if(Blue_Mode_Selected) Blue_PWM_Value = Blue_PWM_Value + 5;
+      }else Increase_Button_Pressed = FALSE;
+      Delay_ms(500);
+    }
 
-    // for(int i = 0; i < TIM4_PERIOD; i += 5){
-    //     Red_PWM_Value = i; // 0.784*exp(0.023*i);
-    //     Green_PWM_Value = i; // 0.784*exp(0.023*i);
-    //     Blue_PWM_Value = i; // 0.784*exp(0.023*i);
-    //   Delay_ms(50);
-    // }
+    if(Decrease_Button_Pressed){
+      if(!READ_DECREASE_BUTTON){
+        if(Red_Mode_Selected) Red_PWM_Value = Red_PWM_Value - 5;
+        if(Green_Mode_Selected) Green_PWM_Value = Green_PWM_Value - 5;
+        if(Blue_Mode_Selected) Blue_PWM_Value = Blue_PWM_Value - 5;
+      }else Decrease_Button_Pressed = FALSE;
+      Delay_ms(500);
+    }
+
+    */
   }
 }
 
@@ -348,7 +391,8 @@ void TMR1_init(void){
 
 /**
   * @brief aprox 2 kHz Timer | 16 Prescaler | TIM2_PERIOD
-  */
+  */ 
+
 void TMR2_init(void){
     
     TIM2_DeInit();
@@ -375,12 +419,11 @@ void TMR4_init(void){
 
     CLK_PeripheralClockConfig(CLK_PERIPHERAL_TIMER4, ENABLE);
     /* Time base configuration */
-    TIM4_TimeBaseInit(TIM4_PRESCALER_16, TIM4_PERIOD);
+    TIM4_TimeBaseInit(TIM4_PRESCALER_64, TIM4_PERIOD);
     /* Clear TIM4 update flag */
     TIM4_ClearFlag(TIM4_FLAG_UPDATE);
     /* Enable update interrupt */
     TIM4_ITConfig(TIM4_IT_UPDATE, ENABLE);
-
     /* Enable TIM4 */
     TIM4_Cmd(ENABLE);
 
